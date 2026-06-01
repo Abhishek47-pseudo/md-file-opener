@@ -74,6 +74,35 @@ npm run build
 # Build runs at 1/3 the size with better performance
 ```
 
+## 🧩 Redis + Backend Setup
+
+This project supports Redis-backed recent file storage using an Express backend.
+
+1. Install Redis on your machine and start it locally.
+   - macOS: `brew install redis && brew services start redis`
+   - Windows: use the Redis MSI installer or WSL.
+   - Linux: use your package manager, e.g. `sudo apt install redis-server`.
+
+2. Start the backend server:
+```bash
+cd server
+npm install
+npm start
+```
+
+   The backend listens at `http://localhost:4000` by default.
+
+3. Start the frontend application in a separate terminal:
+```bash
+cd "md file opene"
+npm install
+npm start
+```
+
+4. Open the app in your browser at `http://localhost:3000`.
+
+The frontend will use the backend to persist recently opened files in Redis, with `localStorage` as a fallback if the backend is unavailable.
+
 ## 📖 Usage
 
 ### Opening Files
@@ -147,6 +176,9 @@ Syntax highlighting available for 190+ languages:
 
 ```
 md-viewer/
+├── server/                      # Express + Redis backend for recent-files storage
+│   ├── index.js                 # Express server implementation
+│   └── package.json             # Backend dependencies and run scripts
 ├── src/
 │   ├── App.js                    # Main app component (290 lines)
 │   ├── App.css                   # Global styles & dark mode (500+ lines)
@@ -198,6 +230,9 @@ md-viewer/
 
 ### SearchBar Component
 - Case-insensitive search
+- BM25-ranked result navigation
+- Recent search result snippet preview
+
 - Keyboard shortcuts
 - Clear button with visual feedback
 - Accessible form controls

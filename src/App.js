@@ -7,6 +7,8 @@ import TableOfContents from './components/TableOfContents';
 import DocumentStats from './components/DocumentStats';
 import SearchBar from './components/SearchBar';
 
+const RECENT_API = process.env.REACT_APP_RECENT_API || 'http://localhost:4000';
+
 function App() {
   const [markdown, setMarkdown] = useState('# Welcome to Markdown Viewer\n\nUpload or drag & drop a markdown file to get started!');
   const [fileName, setFileName] = useState('');
@@ -17,7 +19,6 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [recentFiles, setRecentFiles] = useState(() => JSON.parse(localStorage.getItem('recentFiles') || '[]'));
   const [searchTerm, setSearchTerm] = useState('');
-  const RECENT_API = process.env.REACT_APP_RECENT_API || 'http://localhost:4000';
   const [headings, setHeadings] = useState([]);
   const [sections, setSections] = useState([]);
   const bm25Ref = useRef(null);
@@ -132,33 +133,33 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-+  // Try to load recent files from backend (Redis) on mount, fallback to localStorage
-+  useEffect(() => {
-+    let mounted = true;
-+    fetch(`${RECENT_API}/recent`).then(r => r.json()).then(data => {
-+      if (!mounted) return;
-+      if (Array.isArray(data) && data.length > 0) {
-+        setRecentFiles(data);
-+        localStorage.setItem('recentFiles', JSON.stringify(data));
-+      }
-+    }).catch(() => {
-+      // ignore - localStorage already has fallback
-+    });
-+    return () => { mounted = false; };
-+  }, []);
-+
-+  const postRecentFile = async (fileMeta) => {
-+    try {
-+      await fetch(`${RECENT_API}/recent`, {
-+        method: 'POST',
-+        headers: { 'Content-Type': 'application/json' },
-+        body: JSON.stringify(fileMeta),
-+      });
-+    } catch (e) {
-+      // ignore, keep localStorage fallback
-+    }
-+  };
-+
+  // Try to load recent files from backend (Redis) on mount, fallback to localStorage
+  useEffect(() => {
+    let mounted = true;
+    fetch(`${RECENT_API}/recent`).then(r => r.json()).then(data => {
+      if (!mounted) return;
+      if (Array.isArray(data) && data.length > 0) {
+        setRecentFiles(data);
+        localStorage.setItem('recentFiles', JSON.stringify(data));
+      }
+    }).catch(() => {
+      // ignore - localStorage already has fallback
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const postRecentFile = async (fileMeta) => {
+    try {
+      await fetch(`${RECENT_API}/recent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(fileMeta),
+      });
+    } catch (e) {
+      // ignore, keep localStorage fallback
+    }
+  };
+
    const handleFileUpload = (file) => {
      if (file && (file.name.endsWith('.md') || file.type === 'text/plain')) {
        const reader = new FileReader();
@@ -167,13 +168,10 @@ function App() {
          setFileName(file.name);
 
          // Add to recent files
--        const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
--        setRecentFiles(newRecentFiles);
--        localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
-+        const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
-+        setRecentFiles(newRecentFiles);
-+        localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
-+        postRecentFile(newRecentFiles[0]);
+         const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
+         setRecentFiles(newRecentFiles);
+         localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
+         postRecentFile(newRecentFiles[0]);
        };
        reader.readAsText(file);
      } else {
