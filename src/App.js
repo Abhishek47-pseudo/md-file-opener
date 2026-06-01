@@ -72,7 +72,7 @@ function App() {
       reader.onload = (e) => {
         setMarkdown(e.target.result);
         setFileName(file.name);
-        
+
         // Add to recent files
         const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
         setRecentFiles(newRecentFiles);
@@ -137,7 +137,7 @@ function App() {
   ${renderMarkdownToHTML(markdown)}
 </body>
 </html>`;
-    
+
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -206,7 +206,7 @@ function App() {
                 <p className="shortcut">Ctrl+K</p>
               </div>
             </div>
-            
+
             {fileName && (
               <div className="file-info">
                 <p className="file-name">📄 {fileName}</p>
@@ -231,14 +231,14 @@ function App() {
           </div>
 
           <div className="sidebar-controls">
-            <button 
+            <button
               className={`sidebar-toggle ${showTOC ? 'active' : ''}`}
               onClick={() => setShowTOC(!showTOC)}
               title="Toggle Table of Contents"
             >
               📑 TOC
             </button>
-            <button 
+            <button
               className={`sidebar-toggle ${showStats ? 'active' : ''}`}
               onClick={() => setShowStats(!showStats)}
               title="Toggle Document Stats"
@@ -253,15 +253,38 @@ function App() {
 
         <main className="main-content">
           {fileName && <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />}
-          
+
           <div className="markdown-viewer">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
                 code: CodeBlock,
-                h1: (props) => <h1 id={props.children[0]?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')} {...props} />,
-                h2: (props) => <h2 id={props.children[0]?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')} {...props} />,
-                h3: (props) => <h3 id={props.children[0]?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')} {...props} />,
+                h1: ({ children, ...props }) => (
+                  <h1
+                    id={children?.[0]?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}
+                    {...props}
+                  >
+                    {children}
+                  </h1>
+                ),
+
+                h2: ({ children, ...props }) => (
+                  <h2
+                    id={children?.[0]?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}
+                    {...props}
+                  >
+                    {children}
+                  </h2>
+                ),
+
+                h3: ({ children, ...props }) => (
+                  <h3
+                    id={children?.[0]?.toString().toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '')}
+                    {...props}
+                  >
+                    {children}
+                  </h3>
+                ),
               }}
             >
               {markdown}
