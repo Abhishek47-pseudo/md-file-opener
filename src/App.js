@@ -19,11 +19,34 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [recentFiles, setRecentFiles] = useState(() => JSON.parse(localStorage.getItem('recentFiles') || '[]'));
   const [searchTerm, setSearchTerm] = useState('');
+  const [dragPreview, setDragPreview] = useState({ visible: false, x: 0, y: 0, label: '' });
   const [headings, setHeadings] = useState([]);
   const [sections, setSections] = useState([]);
   const bm25Ref = useRef(null);
   const [searchResults, setSearchResults] = useState([]);
   const [showStats, setShowStats] = useState(true);
+
+  const getFileType = (name) => {
+    const match = name.match(/\.([^.]+)$/);
+    return match ? match[1].toUpperCase() : 'FILE';
+  };
+
+  const saveRecentFiles = (files) => {
+    setRecentFiles(files);
+    localStorage.setItem('recentFiles', JSON.stringify(files));
+  };
+
+  const handleRecentFileClick = (file) => {
+    if (file.content) {
+      setMarkdown(file.content);
+      setFileName(file.name);
+      const updated = [{ ...file, time: new Date().toLocaleString() }, ...recentFiles.filter((item) => item.name !== file.name)].slice(0, 5);
+      saveRecentFiles(updated);
+      postRecentFile({ name: file.name, time: updated[0].time });
+    } else {
+      alert('This recent file is not available in the current browser session. Please re-open it from disk.');
+    }
+  };
 
   // Save preferences to localStorage
   useEffect(() => {
@@ -139,8 +162,12 @@ function App() {
     fetch(`${RECENT_API}/recent`).then(r => r.json()).then(data => {
       if (!mounted) return;
       if (Array.isArray(data) && data.length > 0) {
-        setRecentFiles(data);
-        localStorage.setItem('recentFiles', JSON.stringify(data));
+        const local = JSON.parse(localStorage.getItem('recentFiles') || '[]');
+        const merged = data.map((item) => {
+          const cached = local.find((localItem) => localItem.name === item.name);
+          return cached ? { ...item, content: cached.content } : item;
+        });
+        saveRecentFiles(merged);
       }
     }).catch(() => {
       // ignore - localStorage already has fallback
@@ -164,13 +191,13 @@ function App() {
      if (file && (file.name.endsWith('.md') || file.type === 'text/plain')) {
        const reader = new FileReader();
        reader.onload = (e) => {
-         setMarkdown(e.target.result);
+         const content = e.target.result;
+         setMarkdown(content);
          setFileName(file.name);
 
          // Add to recent files
-         const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
-         setRecentFiles(newRecentFiles);
-         localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
+         const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString(), content }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
+         saveRecentFiles(newRecentFiles);
          postRecentFile(newRecentFiles[0]);
        };
        reader.readAsText(file);
@@ -189,16 +216,29 @@ function App() {
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragging(true);
+    let label = 'Drop file here';
+    if (e.dataTransfer?.items?.length > 0) {
+      const item = e.dataTransfer.items[0];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file?.name) {
+          label = file.name;
+        }
+      }
+    }
+    setDragPreview({ visible: true, x: e.clientX + 18, y: e.clientY + 18, label });
   };
 
   const handleDragLeave = (e) => {
     e.preventDefault();
     setIsDragging(false);
+    setDragPreview(prev => ({ ...prev, visible: false }));
   };
 
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragging(false);
+    setDragPreview(prev => ({ ...prev, visible: false }));
     const file = e.dataTransfer.files[0];
     if (file) {
       handleFileUpload(file);
@@ -258,6 +298,11 @@ function App() {
 
   return (
     <div className={`app ${darkMode ? 'dark-mode' : 'light-mode'}`} style={{ '--font-size': `${fontSize}px` }}>
+      {dragPreview.visible && (
+        <div className="drag-preview" style={{ left: dragPreview.x, top: dragPreview.y }}>
+          {dragPreview.label}
+        </div>
+      )}
       <header className="header">
         <div className="header-left">
           <h1>📝 Beautiful Markdown Viewer</h1>
@@ -310,8 +355,10 @@ function App() {
             </div>
 
             {fileName && (
-              <div className="file-info">
-                <p className="file-name">📄 {fileName}</p>
+              <div className="file-info" title={fileName}>
+                <p className="file-name">
+                  <span className="file-name-text" aria-label={fileName}>📄 {fileName}</span>
+                </p>
                 <div className="file-actions">
                   <button className="action-btn" onClick={copyMarkdown} title="Copy raw markdown">📋 Copy</button>
                   <button className="action-btn" onClick={exportHTML} title="Export as HTML">💾 HTML</button>
@@ -325,7 +372,25 @@ function App() {
                 <h4>📂 Recent Files</h4>
                 <ul>
                   {recentFiles.map((file, idx) => (
-                    <li key={idx} title={file.time}>{file.name}</li>
+                    <li key={idx} className="recent-file-wrapper">
+                      <button
+                        type="button"
+                        className={`recent-file-entry ${file.name === fileName ? 'active' : ''}`}
+                        onClick={() => handleRecentFileClick(file)}
+                        title={file.name}
+                        aria-label={`Open ${file.name}`}
+                        aria-current={file.name === fileName ? 'page' : undefined}
+                      >
+                        <div className="recent-file-meta">
+                          <div className="recent-file-name">{file.name}</div>
+                          <div className="recent-file-details">
+                            <span className="recent-file-type">{getFileType(file.name)}</span>
+                            <span className="recent-file-time">{file.time || 'Recent'}</span>
+                          </div>
+                        </div>
+                        <span className="recent-file-action">›</span>
+                      </button>
+                    </li>
                   ))}
                 </ul>
               </div>
