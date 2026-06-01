@@ -2,16 +2,17 @@
 
 > A modern, feature-rich markdown document viewer built with React, designed for developers, students, and technical writers who need a beautiful reading experience for markdown files.
 
-Transform plain .md files into an interactive documentation experience with syntax highlighting, intelligent navigation, search capabilities, responsive layouts, and a polished user interface inspired by modern documentation platforms.
+> Transform plain .md files into an interactive documentation experience with syntax highlighting, intelligent navigation, search capabilities, responsive layouts, and a polished user interface inspired by modern documentation platforms.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![React](https://img.shields.io/badge/React-18.2-blue.svg)](https://react.dev)
+[![Node](https://img.shields.io/badge/Node-14+-green.svg)](https://nodejs.org)
 
 
 🚀 Live Demo
 
 🌐 Try it now: https://md-file-opener.vercel.app
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![React](https://img.shields.io/badge/React-18.2-blue.svg)](https://react.dev)
-[![Node](https://img.shields.io/badge/Node-14+-green.svg)](https://nodejs.org)
 
 ## Table of Contents
 
