@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './App.css';
@@ -14,9 +14,14 @@ function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('darkMode') === 'true');
   const [fontSize, setFontSize] = useState(() => parseInt(localStorage.getItem('fontSize') || '16'));
   const [showTOC, setShowTOC] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [recentFiles, setRecentFiles] = useState(() => JSON.parse(localStorage.getItem('recentFiles') || '[]'));
   const [searchTerm, setSearchTerm] = useState('');
+  const RECENT_API = process.env.REACT_APP_RECENT_API || 'http://localhost:4000';
   const [headings, setHeadings] = useState([]);
+  const [sections, setSections] = useState([]);
+  const bm25Ref = useRef(null);
+  const [searchResults, setSearchResults] = useState([]);
   const [showStats, setShowStats] = useState(true);
 
   // Save preferences to localStorage
@@ -39,7 +44,68 @@ function App() {
       matches.push({ level, text, id: text.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '') });
     }
     setHeadings(matches);
+    // build sections for BM25: split by headings
+    const buildSections = () => {
+      const lines = markdown.split(/\r?\n/);
+      const sec = [];
+      const headingLineRe = /^(#{1,6})\s+(.+)$/;
+      let current = { id: 'intro', title: 'Introduction', text: '' };
+      for (let i = 0; i < lines.length; i++) {
+        const ln = lines[i];
+        const h = ln.match(headingLineRe);
+        if (h) {
+          // push previous if has content
+          if ((current.text || '').trim().length > 0 || current.title) sec.push({ ...current });
+          const title = h[2].trim();
+          const id = title.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+          current = { id, title, text: '' };
+        } else {
+          current.text += ln + '\n';
+        }
+      }
+      if ((current.text || '').trim().length > 0 || current.title) sec.push({ ...current });
+      return sec;
+    };
+
+    const built = buildSections();
+    setSections(built);
   }, [markdown]);
+
+  // build BM25 index when sections change
+  useEffect(() => {
+    import('./utils/bm25').then(mod => {
+      const BM25 = mod.default;
+      if (sections.length === 0) {
+        bm25Ref.current = null;
+        return;
+      }
+      const docs = sections.map(s => ({ id: s.id, title: s.title, text: `${s.title}\n${s.text}` }));
+      bm25Ref.current = new BM25(docs);
+    }).catch(() => { bm25Ref.current = null; });
+  }, [sections]);
+
+  // run search with debounce
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      const q = (searchTerm || '').trim();
+      if (!q || !bm25Ref.current) {
+        setSearchResults([]);
+        return;
+      }
+      const raw = bm25Ref.current.search(q, 12);
+      const results = raw.map(r => {
+        const sec = sections.find(s => s.id === r.id) || { title: r.id, text: '' };
+        // snippet around first occurrence
+        const idx = (sec.text || '').toLowerCase().indexOf(q.toLowerCase());
+        let snippet = '';
+        if (idx >= 0) snippet = sec.text.substr(Math.max(0, idx - 40), 160).replace(/\n/g, ' ');
+        else snippet = (sec.text || '').substr(0, 160).replace(/\n/g, ' ');
+        return { id: r.id, title: sec.title, score: r.score, snippet };
+      });
+      setSearchResults(results);
+    }, 190);
+    return () => clearTimeout(handle);
+  }, [searchTerm, sections]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -66,23 +132,54 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  const handleFileUpload = (file) => {
-    if (file && (file.name.endsWith('.md') || file.type === 'text/plain')) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setMarkdown(e.target.result);
-        setFileName(file.name);
++  // Try to load recent files from backend (Redis) on mount, fallback to localStorage
++  useEffect(() => {
++    let mounted = true;
++    fetch(`${RECENT_API}/recent`).then(r => r.json()).then(data => {
++      if (!mounted) return;
++      if (Array.isArray(data) && data.length > 0) {
++        setRecentFiles(data);
++        localStorage.setItem('recentFiles', JSON.stringify(data));
++      }
++    }).catch(() => {
++      // ignore - localStorage already has fallback
++    });
++    return () => { mounted = false; };
++  }, []);
++
++  const postRecentFile = async (fileMeta) => {
++    try {
++      await fetch(`${RECENT_API}/recent`, {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify(fileMeta),
++      });
++    } catch (e) {
++      // ignore, keep localStorage fallback
++    }
++  };
++
+   const handleFileUpload = (file) => {
+     if (file && (file.name.endsWith('.md') || file.type === 'text/plain')) {
+       const reader = new FileReader();
+       reader.onload = (e) => {
+         setMarkdown(e.target.result);
+         setFileName(file.name);
 
-        // Add to recent files
-        const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
-        setRecentFiles(newRecentFiles);
-        localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
-      };
-      reader.readAsText(file);
-    } else {
-      alert('Please upload a .md or text file');
-    }
-  };
+         // Add to recent files
+-        const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
+-        setRecentFiles(newRecentFiles);
+-        localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
++        const newRecentFiles = [{ name: file.name, time: new Date().toLocaleString() }, ...recentFiles.filter(f => f.name !== file.name)].slice(0, 5);
++        setRecentFiles(newRecentFiles);
++        localStorage.setItem('recentFiles', JSON.stringify(newRecentFiles));
++        postRecentFile(newRecentFiles[0]);
+       };
+       reader.readAsText(file);
+     } else {
+       alert('Please upload a .md or text file');
+     }
+   };
 
   const handleFileInput = (e) => {
     const file = e.target.files[0];
@@ -169,6 +266,13 @@ function App() {
           <p>View your markdown files with style</p>
         </div>
         <div className="header-controls">
+          <button
+            className={`icon-btn sidebar-toggle-btn ${sidebarOpen ? 'open' : 'closed'}`}
+            onClick={() => setSidebarOpen(s => !s)}
+            title="Toggle sidebar"
+          >
+            {sidebarOpen ? '🡸' : '🡺'}
+          </button>
           <button className="icon-btn" onClick={() => setDarkMode(!darkMode)} title={`Switch to ${darkMode ? 'light' : 'dark'} mode`}>
             {darkMode ? '☀️' : '🌙'}
           </button>
@@ -180,7 +284,7 @@ function App() {
         </div>
       </header>
 
-      <div className="container">
+      <div className={`container ${!sidebarOpen ? 'sidebar-collapsed' : ''}`}>
         <aside className="sidebar">
           <div className="upload-section">
             <h3>Upload File</h3>
@@ -247,12 +351,29 @@ function App() {
             </button>
           </div>
 
-          {showTOC && headings.length > 0 && <TableOfContents headings={headings} />}
+          {showTOC && headings.length > 0 && (
+            <TableOfContents headings={headings} onNavigate={() => { if (window.innerWidth < 768) setSidebarOpen(false); }} />
+          )}
           {showStats && fileName && <DocumentStats markdown={markdown} />}
         </aside>
 
         <main className="main-content">
-          {fileName && <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />}
+          {fileName && (
+            <SearchBar
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              results={searchResults}
+              onResultClick={(id) => {
+                const el = document.getElementById(id);
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  el.setAttribute('tabindex', '-1');
+                  el.focus({ preventScroll: true });
+                }
+                if (window.innerWidth < 768) setSidebarOpen(false);
+              }}
+            />
+          )}
 
           <div className="markdown-viewer">
             <ReactMarkdown

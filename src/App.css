@@ -117,12 +117,17 @@ body {
 
 .sidebar {
   width: 320px;
-  min-width: 320px;
-  max-height: calc(100vh - 200px);
-  overflow-y: auto;
+  min-width: 260px;
+  max-width: 360px;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  position: sticky;
+  top: 100px;
+  align-self: flex-start;
+  height: calc(100vh - 140px);
+  overflow: auto;
+  padding-right: 6px;
 }
 
 .upload-section {
@@ -330,6 +335,55 @@ body {
   font-size: var(--font-size);
   flex: 1;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbars for sidebar and markdown viewer */
+.sidebar::-webkit-scrollbar {
+  width: 10px;
+}
+.sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(102,126,234,0.25), rgba(118,75,162,0.25));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.sidebar::-webkit-scrollbar-thumb:hover {
+  filter: brightness(1.05);
+}
+
+.markdown-viewer::-webkit-scrollbar {
+  height: 10px;
+  width: 12px;
+}
+.markdown-viewer::-webkit-scrollbar-track {
+  background: transparent;
+}
+.markdown-viewer::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(45,55,72,0.18), rgba(45,55,72,0.12));
+  border-radius: 8px;
+}
+
+/* Firefox scrollbar styles */
+.sidebar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102,126,234,0.25) transparent;
+}
+.markdown-viewer {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(45,55,72,0.18) transparent;
+}
+
+/* Modern card and hover enhancements */
+.upload-section, .recent-files, .file-info {
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.upload-section:hover, .recent-files:hover, .file-info:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 24px rgba(15,23,42,0.06);
 }
 
 /* Markdown Styling */
@@ -510,6 +564,14 @@ body {
     width: 100%;
     min-width: unset;
     max-height: unset;
+    position: relative;
+    height: auto;
+    overflow: visible;
+  }
+
+  /* When collapsed hide the sidebar visually but keep accessible */
+  .sidebar-collapsed .sidebar {
+    display: none;
   }
 
   .header {
