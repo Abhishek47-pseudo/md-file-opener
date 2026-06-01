@@ -1,6 +1,6 @@
 # Beautiful Markdown Viewer
 
-A modern, feature-rich markdown document viewer built with React, designed for developers, students, and technical writers who need a beautiful reading experience for markdown files.
+> A modern, feature-rich markdown document viewer built with React, designed for developers, students, and technical writers who need a beautiful reading experience for markdown files.
 
 Transform plain .md files into an interactive documentation experience with syntax highlighting, intelligent navigation, search capabilities, responsive layouts, and a polished user interface inspired by modern documentation platforms.
 
