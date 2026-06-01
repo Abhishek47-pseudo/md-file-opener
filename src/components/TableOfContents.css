@@ -1,0 +1,69 @@
+.toc-container {
+  background: var(--background);
+  border-radius: 6px;
+  padding: 1rem;
+  border: 1px solid var(--border-color);
+  margin-bottom: 1rem;
+}
+
+.toc-container h4 {
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  margin-bottom: 0.75rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.toc-nav {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.toc-nav ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc-nav li {
+  margin: 0.25rem 0;
+}
+
+.toc-link {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  width: 100%;
+  display: block;
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.toc-link:hover {
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--primary-color);
+  padding-left: 1rem;
+}
+
+.toc-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.toc-nav::-webkit-scrollbar-track {
+  background: var(--surface);
+  border-radius: 3px;
+}
+
+.toc-nav::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.toc-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
+}
