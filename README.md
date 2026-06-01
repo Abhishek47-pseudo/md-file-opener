@@ -1,6 +1,13 @@
 # Beautiful Markdown Viewer
 
-> A stunning, modern web application for viewing markdown files with beautiful styling, syntax highlighting, responsive design, and advanced features.
+A modern, feature-rich markdown document viewer built with React, designed for developers, students, and technical writers who need a beautiful reading experience for markdown files.
+
+Transform plain .md files into an interactive documentation experience with syntax highlighting, intelligent navigation, search capabilities, responsive layouts, and a polished user interface inspired by modern documentation platforms.
+
+
+🚀 Live Demo
+
+🌐 Try it now: https://md-file-opener.vercel.app
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![React](https://img.shields.io/badge/React-18.2-blue.svg)](https://react.dev)
